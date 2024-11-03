@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
+import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.laboratorio9.ui.theme.Laboratorio9Theme
 import retrofit2.Retrofit
