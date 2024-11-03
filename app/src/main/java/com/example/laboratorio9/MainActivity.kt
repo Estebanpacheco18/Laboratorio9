@@ -47,6 +47,7 @@ fun ProgPrincipal9() {
     val urlBase = "https://jsonplaceholder.typicode.com/"
     val retrofit = Retrofit.Builder().baseUrl(urlBase)
         .addConverterFactory(GsonConverterFactory.create()).build()
+    val servicio = retrofit.create(PostApiService::class.java)
     val navController = rememberNavController()
 
     Scaffold(
