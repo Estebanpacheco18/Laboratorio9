@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,21 +15,19 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import coil.compose.rememberImagePainter
 import com.example.laboratorio9.ui.theme.Laboratorio9Theme
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,16 +45,12 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun ProgPrincipal9(modifier: Modifier = Modifier) {
-    val urlBase = "https://jsonplaceholder.typicode.com/"
-    val retrofit = Retrofit.Builder().baseUrl(urlBase)
-        .addConverterFactory(GsonConverterFactory.create()).build()
-    val servicio = retrofit.create(PostApiService::class.java)
     val navController = rememberNavController()
 
     Scaffold(
         topBar = { BarraSuperior() },
         bottomBar = { BarraInferior(navController) },
-        content = { paddingValues -> Contenido(paddingValues, navController, servicio) }
+        content = { paddingValues -> Contenido(paddingValues, navController) }
     )
 }
 
@@ -65,7 +60,7 @@ fun BarraSuperior() {
     CenterAlignedTopAppBar(
         title = {
             Text(
-                text = "JSONPlaceHolder Access",
+                text = "PokeAPI Access",
                 color = Color.White,
                 fontWeight = FontWeight.Bold
             )
@@ -88,10 +83,10 @@ fun BarraInferior(navController: NavHostController) {
             onClick = { navController.navigate("inicio") }
         )
         NavigationBarItem(
-            icon = { Icon(Icons.Outlined.Favorite, contentDescription = "Posts") },
-            label = { Text("Posts") },
-            selected = navController.currentDestination?.route == "posts",
-            onClick = { navController.navigate("posts") }
+            icon = { Icon(Icons.Outlined.Favorite, contentDescription = "Pokemon") },
+            label = { Text("Pokemon") },
+            selected = navController.currentDestination?.route == "pokemon",
+            onClick = { navController.navigate("pokemon") }
         )
     }
 }
@@ -99,8 +94,7 @@ fun BarraInferior(navController: NavHostController) {
 @Composable
 fun Contenido(
     pv: PaddingValues,
-    navController: NavHostController,
-    servicio: PostApiService
+    navController: NavHostController
 ) {
     Box(
         modifier = Modifier
@@ -112,11 +106,11 @@ fun Contenido(
             startDestination = "inicio"
         ) {
             composable("inicio") { ScreenInicio() }
-            composable("posts") { ScreenPosts(navController, servicio) }
-            composable("postsVer/{id}", arguments = listOf(
-                navArgument("id") { type = NavType.IntType }
+            composable("pokemon") { ScreenPokemon(navController) }
+            composable("pokemonVer/{name}", arguments = listOf(
+                navArgument("name") { type = NavType.StringType }
             )) {
-                ScreenPost(navController, servicio, it.arguments!!.getInt("id"))
+                ScreenPokemonDetail(navController, it.arguments!!.getString("name")!!)
             }
         }
     }
@@ -128,23 +122,18 @@ fun ScreenInicio() {
 }
 
 @Composable
-fun ScreenPosts(navController: NavHostController, servicio: PostApiService) {
-    var listaPosts: SnapshotStateList<PostModel> = remember { mutableStateListOf() }
-    LaunchedEffect(Unit) {
-        val listado = servicio.getUserPosts()
-        listado.forEach { listaPosts.add(it) }
-    }
+fun ScreenPokemon(navController: NavHostController) {
+    val viewModel: PokeViewModel = viewModel()
+    val pokemonList by remember { mutableStateOf(viewModel.pokemonList) }
 
     LazyColumn {
-        items(listaPosts) { item ->
+        items(pokemonList) { item ->
             Row(modifier = Modifier.padding(8.dp)) {
-                Text(text = item.id.toString(), Modifier.weight(0.05f), textAlign = TextAlign.End)
-                Spacer(Modifier.padding(horizontal = 1.dp))
-                Text(text = item.title, Modifier.weight(0.7f))
+                Text(text = item.name, Modifier.weight(0.7f))
                 IconButton(
                     onClick = {
-                        navController.navigate("postsVer/${item.id}")
-                        Log.e("POSTS", "ID = ${item.id}")
+                        navController.navigate("pokemonVer/${item.name}")
+                        Log.e("POKEMON", "Name = ${item.name}")
                     },
                     Modifier.weight(0.1f)
                 ) {
@@ -156,42 +145,27 @@ fun ScreenPosts(navController: NavHostController, servicio: PostApiService) {
 }
 
 @Composable
-fun ScreenPost(navController: NavHostController, servicio: PostApiService, id: Int) {
-    var post by remember { mutableStateOf<PostModel?>(null) }
-    LaunchedEffect(Unit) {
-        val xpost = servicio.getUserPostById(id)
-        post = xpost.copy()?.takeIf { xpost.body != null }
+fun ScreenPokemonDetail(navController: NavHostController, name: String) {
+    val viewModel: PokeViewModel = viewModel()
+    var pokemon by remember { mutableStateOf<Pokemon?>(null) }
+
+    LaunchedEffect(name) {
+        viewModel.fetchPokemonByName(name)
+        pokemon = viewModel.selectedPokemon
     }
+
     Column(
         Modifier
             .padding(8.dp)
             .fillMaxSize()
     ) {
-        if (post != null) {
-            OutlinedTextField(
-                value = post!!.id.toString(),
-                onValueChange = {},
-                label = { Text("id") },
-                readOnly = true
-            )
-            OutlinedTextField(
-                value = post!!.userId.toString(),
-                onValueChange = {},
-                label = { Text("userId") },
-                readOnly = true
-            )
-            OutlinedTextField(
-                value = post!!.title.toString(),
-                onValueChange = {},
-                label = { Text("title") },
-                readOnly = true
-            )
-            OutlinedTextField(
-                value = post!!.body.toString(),
-                onValueChange = {},
-                label = { Text("body") },
-                readOnly = true
-            )
+        if (pokemon != null) {
+            Text(text = "Name: ${pokemon!!.name}")
+            Text(text = "Height: ${pokemon!!.height}")
+            Text(text = "Weight: ${pokemon!!.weight}")
+            pokemon!!.sprites.frontDefault?.let {
+                Image(painter = rememberImagePainter(it), contentDescription = "Pokemon Image")
+            }
         }
     }
 }
