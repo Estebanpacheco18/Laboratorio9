@@ -9,24 +9,24 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 
-class PostViewModel : ViewModel() {
-    val posts: SnapshotStateList<PostModel> = mutableStateListOf()
-    var selectedPost: PostModel? by mutableStateOf(null)
+class PokeViewModel : ViewModel() {
+    val pokemonList: SnapshotStateList<PokemonResult> = mutableStateListOf()
+    var selectedPokemon: Pokemon? by mutableStateOf(null)
 
     init {
-        fetchPosts()
+        fetchPokemonList()
     }
 
-    private fun fetchPosts() {
+    private fun fetchPokemonList() {
         viewModelScope.launch {
-            val postList = PostModule.postApiService.getUserPosts()
-            posts.addAll(postList)
+            val response = PokeModule.pokeApiService.getPokemonList()
+            pokemonList.addAll(response.results)
         }
     }
 
-    fun fetchPostById(id: Int) {
+    fun fetchPokemonByName(name: String) {
         viewModelScope.launch {
-            selectedPost = PostModule.postApiService.getUserPostById(id)
+            selectedPokemon = PokeModule.pokeApiService.getPokemonByName(name)
         }
     }
 }
