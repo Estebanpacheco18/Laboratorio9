@@ -1,11 +1,11 @@
 package com.example.laboratorio9
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -128,12 +129,16 @@ fun ScreenPokemon(navController: NavHostController) {
 
     LazyColumn {
         items(pokemonList) { item ->
-            Row(modifier = Modifier.padding(8.dp)) {
+            Row(modifier = Modifier
+                .padding(8.dp)
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(8.dp)
+            ) {
                 Text(text = item.name, Modifier.weight(0.7f))
                 IconButton(
                     onClick = {
                         navController.navigate("pokemonVer/${item.name}")
-                        Log.e("POKEMON", "Name = ${item.name}")
                     },
                     Modifier.weight(0.1f)
                 ) {
@@ -160,9 +165,9 @@ fun ScreenPokemonDetail(navController: NavHostController, name: String) {
             .fillMaxSize()
     ) {
         if (pokemon != null) {
-            Text(text = "Name: ${pokemon!!.name}")
-            Text(text = "Height: ${pokemon!!.height}")
-            Text(text = "Weight: ${pokemon!!.weight}")
+            Text(text = "Name: ${pokemon!!.name}", style = MaterialTheme.typography.bodyLarge)
+            Text(text = "Height: ${pokemon!!.height}", style = MaterialTheme.typography.bodyMedium)
+            Text(text = "Weight: ${pokemon!!.weight}", style = MaterialTheme.typography.bodyMedium)
             pokemon!!.sprites.frontDefault?.let {
                 Image(painter = rememberImagePainter(it), contentDescription = "Pokemon Image")
             }
