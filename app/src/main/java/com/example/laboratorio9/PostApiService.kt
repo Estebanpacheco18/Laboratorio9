@@ -2,19 +2,19 @@ package com.example.laboratorio9
 
 import retrofit2.http.*
 
-interface PostApiService {
-    @GET("posts")
-    suspend fun getUserPosts(): List<PostModel>
+interface PokeApiService {
+    @GET("pokemon")
+    suspend fun getPokemonList(): PokemonListResponse
 
-    @GET("posts/{id}")
-    suspend fun getUserPostById(@Path("id") id: Int): PostModel
+    @GET("pokemon/{name}")
+    suspend fun getPokemonByName(@Path("name") name: String): Pokemon
 
-    @POST("posts")
-    suspend fun createPost(@Body post: PostModel): PostModel
+    @POST("pokemon")
+    suspend fun createPokemon(@Body pokemon: Pokemon): Pokemon
 
-    @PUT("posts/{id}")
-    suspend fun updatePost(@Path("id") id: Int, @Body post: PostModel): PostModel
+    @PUT("pokemon/{name}")
+    suspend fun updatePokemon(@Path("name") name: String, @Body pokemon: Pokemon): Pokemon
 
-    @DELETE("posts/{id}")
-    suspend fun deletePost(@Path("id") id: Int)
+    @DELETE("pokemon/{name}")
+    suspend fun deletePokemon(@Path("name") name: String)
 }

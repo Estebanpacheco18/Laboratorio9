@@ -4,15 +4,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Favorite
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -20,23 +17,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import coil.compose.rememberImagePainter
 import com.example.laboratorio9.ui.theme.Laboratorio9Theme
 
 class MainActivity : ComponentActivity() {
+    private val pokeViewModel: PostViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             Laboratorio9Theme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    ProgPrincipal9(modifier = Modifier.padding(innerPadding))
+                    ProgPrincipal9(modifier = Modifier.padding(innerPadding), pokeViewModel)
                 }
             }
         }
@@ -44,13 +40,13 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun ProgPrincipal9(modifier: Modifier = Modifier) {
+fun ProgPrincipal9(modifier: Modifier = Modifier, pokeViewModel: PostViewModel) {
     val navController = rememberNavController()
 
     Scaffold(
         topBar = { BarraSuperior() },
         bottomBar = { BarraInferior(navController) },
-        content = { paddingValues -> Contenido(paddingValues, navController) }
+        content = { paddingValues -> Contenido(paddingValues, navController, pokeViewModel) }
     )
 }
 
@@ -83,8 +79,8 @@ fun BarraInferior(navController: NavHostController) {
             onClick = { navController.navigate("inicio") }
         )
         NavigationBarItem(
-            icon = { Icon(Icons.Outlined.Favorite, contentDescription = "Pokemon") },
-            label = { Text("Pokemon") },
+            icon = { Icon(Icons.Outlined.Favorite, contentDescription = "Pokémon") },
+            label = { Text("Pokémon") },
             selected = navController.currentDestination?.route == "pokemon",
             onClick = { navController.navigate("pokemon") }
         )
@@ -94,7 +90,8 @@ fun BarraInferior(navController: NavHostController) {
 @Composable
 fun Contenido(
     pv: PaddingValues,
-    navController: NavHostController
+    navController: NavHostController,
+    pokeViewModel: PostViewModel
 ) {
     Box(
         modifier = Modifier
@@ -106,11 +103,13 @@ fun Contenido(
             startDestination = "inicio"
         ) {
             composable("inicio") { ScreenInicio() }
-            composable("pokemon") { ScreenPokemon(navController) }
+            composable("pokemon") { ScreenPokemon(navController, pokeViewModel) }
             composable("pokemonVer/{name}", arguments = listOf(
                 navArgument("name") { type = NavType.StringType }
             )) {
-                ScreenPokemonDetail(navController, it.arguments!!.getString("name")!!)
+                val name = it.arguments!!.getString("name")!!
+                pokeViewModel.fetchPokemonByName(name)
+                ScreenPokemonDetail(navController, pokeViewModel)
             }
         }
     }
@@ -122,18 +121,12 @@ fun ScreenInicio() {
 }
 
 @Composable
-fun ScreenPokemon(navController: NavHostController) {
-    val viewModel: PokeViewModel = viewModel()
-    val pokemonList by remember { mutableStateOf(viewModel.pokemonList) }
+fun ScreenPokemon(navController: NavHostController, pokeViewModel: PostViewModel) {
+    val pokemonList by pokeViewModel.pokemonList.collectAsState()
 
     LazyColumn {
         items(pokemonList) { item ->
-            Row(modifier = Modifier
-                .padding(8.dp)
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(8.dp)
-            ) {
+            Row(modifier = Modifier.padding(8.dp)) {
                 Text(text = item.name, Modifier.weight(0.7f))
                 IconButton(
                     onClick = {
@@ -143,33 +136,44 @@ fun ScreenPokemon(navController: NavHostController) {
                 ) {
                     Icon(imageVector = Icons.Outlined.Search, contentDescription = "Ver")
                 }
+                IconButton(
+                    onClick = {
+                        pokeViewModel.deletePokemon(item.name)
+                    },
+                    Modifier.weight(0.1f)
+                ) {
+                    Icon(imageVector = Icons.Outlined.Delete, contentDescription = "Eliminar")
+                }
             }
         }
     }
 }
 
 @Composable
-fun ScreenPokemonDetail(navController: NavHostController, name: String) {
-    val viewModel: PokeViewModel = viewModel()
-    var pokemon by remember { mutableStateOf<Pokemon?>(null) }
-
-    LaunchedEffect(name) {
-        viewModel.fetchPokemonByName(name)
-        pokemon = viewModel.selectedPokemon
-    }
+fun ScreenPokemonDetail(navController: NavHostController, pokeViewModel: PostViewModel) {
+    val pokemon by pokeViewModel.selectedPokemon.collectAsState()
 
     Column(
         Modifier
             .padding(8.dp)
             .fillMaxSize()
     ) {
-        if (pokemon != null) {
-            Text(text = "Name: ${pokemon!!.name}", style = MaterialTheme.typography.bodyLarge)
-            Text(text = "Height: ${pokemon!!.height}", style = MaterialTheme.typography.bodyMedium)
-            Text(text = "Weight: ${pokemon!!.weight}", style = MaterialTheme.typography.bodyMedium)
-            pokemon!!.sprites.frontDefault?.let {
-                Image(painter = rememberImagePainter(it), contentDescription = "Pokemon Image")
-            }
+        pokemon?.let {
+            OutlinedTextField(
+                value = it.name,
+                onValueChange = { newName -> pokeViewModel.updatePokemon(it.name, it.copy(name = newName)) },
+                label = { Text("Name") }
+            )
+            OutlinedTextField(
+                value = it.height.toString(),
+                onValueChange = { newHeight -> pokeViewModel.updatePokemon(it.name, it.copy(height = newHeight.toInt())) },
+                label = { Text("Height") }
+            )
+            OutlinedTextField(
+                value = it.weight.toString(),
+                onValueChange = { newWeight -> pokeViewModel.updatePokemon(it.name, it.copy(weight = newWeight.toInt())) },
+                label = { Text("Weight") }
+            )
         }
     }
 }
